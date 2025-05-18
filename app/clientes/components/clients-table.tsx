@@ -30,34 +30,34 @@ export default function ClientsTable({ clients, onView, onEdit, onDelete }: Clie
               <div className="flex items-center">
                 <ClientAvatar nombre={client.nombre} apellido={client.apellido} />
                 <div className="ml-4">
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-black">
                     {client.nombre} {client.apellido}
                   </div>
-                  <div className="text-sm text-gray-500">ID: {client.id}</div>
+                  <div className="text-sm text-black">ID: {client.id}</div>
                 </div>
               </div>
             </td>
             <td className="py-4 whitespace-nowrap">
-              <div className="flex items-center">
-                <FileText size={16} className="text-gray-400 mr-2" />
+              <div className="flex items-center text-black">
+                <FileText size={16} className="mr-2" />
                 <span>{client.documento}</span>
               </div>
             </td>
             <td className="py-4 whitespace-nowrap">
-              <div className="text-sm">
+              <div className="text-sm text-black">
                 <div className="flex items-center mb-1">
-                  <Mail size={16} className="text-gray-400 mr-2" />
+                  <Mail size={16} className="mr-2" />
                   <span>{client.email}</span>
                 </div>
                 <div className="flex items-center">
-                  <Phone size={16} className="text-gray-400 mr-2" />
+                  <Phone size={16} className="mr-2" />
                   <span>{client.telefono}</span>
                 </div>
               </div>
             </td>
             <td className="py-4 whitespace-nowrap">
-              <div className="flex items-center">
-                <Calendar size={16} className="text-gray-400 mr-2" />
+              <div className="flex items-center text-black">
+                <Calendar size={16} className="mr-2" />
                 <span>{client.fechaRegistro}</span>
               </div>
             </td>
@@ -65,7 +65,7 @@ export default function ClientsTable({ clients, onView, onEdit, onDelete }: Clie
               <div className="flex justify-end space-x-2">
                 <button
                   onClick={() => onView(client)}
-                  className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+                  className="p-2 bg-gray-100 text-black rounded-full hover:bg-gray-200 transition-colors"
                   title="Ver detalles"
                 >
                   <UserCircle size={18} />

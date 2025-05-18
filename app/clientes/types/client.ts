@@ -29,3 +29,10 @@ export type FormErrors = {
 export type AlertType = "success" | "error"
 
 export type ModalMode = "create" | "edit" | "view" | "delete"
+
+export type FilterType = "all" | "nombre" | "documento" | "email"
+
+export type FilterOption = {
+  value: FilterType
+  label: string
+}

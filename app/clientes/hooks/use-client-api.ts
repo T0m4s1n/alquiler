@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
-import type { Client, FormData, AlertType } from "../types/client.ts"
+import type { Client, FormData, AlertType, FilterType } from "../types/client"
 import { API_BASE_URL } from "../config/api"
 
 export default function useClientApi() {
@@ -34,6 +34,41 @@ export default function useClientApi() {
       setError(null)
     } catch (err) {
       setError("Error al cargar los clientes")
+      setLoading(false)
+      console.error(err)
+    }
+  }
+
+  // Fetch filtered clients from API
+  const fetchFilteredClients = async (filterType: FilterType, filterValue: string) => {
+    if (!filterValue.trim() || filterType === "all") {
+      return fetchClients()
+    }
+
+    setLoading(true)
+    try {
+      let endpoint = `${API_BASE_URL}/api/clientes`
+
+      switch (filterType) {
+        case "nombre":
+          endpoint = `${API_BASE_URL}/api/clientes/nombre/${filterValue}`
+          break
+        case "documento":
+          endpoint = `${API_BASE_URL}/api/clientes/documento/${filterValue}`
+          break
+        case "email":
+          endpoint = `${API_BASE_URL}/api/clientes/email/${filterValue}`
+          break
+      }
+
+      const response = await axios.get(endpoint)
+      const data = Array.isArray(response.data) ? response.data : [response.data]
+
+      setClients(data)
+      setLoading(false)
+      setError(null)
+    } catch (err) {
+      setError("Error al filtrar los clientes")
       setLoading(false)
       console.error(err)
     }
@@ -128,6 +163,7 @@ export default function useClientApi() {
     alertMessage,
     alertType,
     fetchClients,
+    fetchFilteredClients,
     createClient,
     updateClient,
     deleteClient,

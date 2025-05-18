@@ -1,17 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import type { Client, ModalMode } from "../types/client.ts"
+import type { Client, ModalMode } from "../types/client"
 
 export default function useModal() {
   const [showModal, setShowModal] = useState(false)
   const [modalMode, setModalMode] = useState<ModalMode>("create")
-  const [currentClient, setCurrentClient] = useState<Client | null>(null)
+  const [currentClient, setCurrentClientState] = useState<Client | null>(null)
 
   // Open modal for create, edit, view or delete
   const openModal = (mode: ModalMode, client: Client | null = null) => {
     setModalMode(mode)
-    setCurrentClient(client)
+    setCurrentClientState(client)
     setShowModal(true)
   }
 
@@ -36,6 +36,11 @@ export default function useModal() {
     }
   }
 
+  // Set current client directly
+  const updateCurrentClient = (client: Client | null) => {
+    setCurrentClientState(client)
+  }
+
   return {
     showModal,
     modalMode,
@@ -43,5 +48,6 @@ export default function useModal() {
     openModal,
     closeModal,
     getModalTitle,
+    updateCurrentClient,
   }
 }
