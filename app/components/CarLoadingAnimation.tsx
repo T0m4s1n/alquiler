@@ -160,6 +160,9 @@ export default function CarLoadingAnimation() {
             <h1 className="text-5xl font-bold tracking-wider font-[Poppins]">
               RIVER CARS
             </h1>
+            <p className="text-lg font-light mt-2">
+              Desarrolado por River and T0m4s1n 
+            </p>
             
             {/* Tagline that appears as blur reduces */}
             <p 
