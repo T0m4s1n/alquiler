@@ -1,33 +1,33 @@
 "use client"
 
 import { AlertCircle, Trash2 } from "lucide-react"
-import type { Client } from "../types/client"
+import type { Vehicle } from "../types/vehicle"
 
 type DeleteConfirmationProps = {
-  client: Client
+  vehicle: Vehicle
   loading: boolean
   onConfirm: () => void
   onCancel: () => void
 }
 
-export default function DeleteClientConfirmation({ client, loading, onConfirm, onCancel }: DeleteConfirmationProps) {
+export default function DeleteConfirmation({ vehicle, loading, onConfirm, onCancel }: DeleteConfirmationProps) {
   return (
     <div className="text-center">
       <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-50 flex items-center justify-center">
         <AlertCircle size={48} className="text-red-500" />
       </div>
 
-      <h4 className="text-xl font-medium mb-3 text-gray-800">¿Está seguro de eliminar este cliente?</h4>
+      <h4 className="text-xl font-medium mb-3 text-gray-800">¿Está seguro de eliminar este vehículo?</h4>
 
       <div className="p-4 mb-6 bg-gray-50 rounded-lg border border-gray-100">
         <p className="text-gray-600 mb-2">
-          Esta acción no se puede deshacer. Se eliminará permanentemente el cliente:
+          Esta acción no se puede deshacer. Se eliminará permanentemente el vehículo:
         </p>
         <p className="font-medium text-gray-800 text-lg">
-          {client.nombre} {client.apellido}
+          {vehicle.marca} {vehicle.modelo}
         </p>
         <p className="text-gray-500 text-sm">
-          Documento: {client.documento} | Email: {client.email}
+          Matrícula: {vehicle.matricula} | Tipo: {vehicle.tipo}
         </p>
       </div>
 
@@ -52,7 +52,7 @@ export default function DeleteClientConfirmation({ client, loading, onConfirm, o
           ) : (
             <>
               <Trash2 size={18} className="mr-2" />
-              Eliminar Cliente
+              Eliminar Vehículo
             </>
           )}
         </button>

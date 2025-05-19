@@ -2,7 +2,7 @@
 
 import { AlertCircle, Check, X } from "lucide-react"
 import { useState, useEffect } from "react"
-import type { AlertType } from "../types/client"
+import type { AlertType } from "../types/vehicle"
 
 type AlertMessageProps = {
   message: string

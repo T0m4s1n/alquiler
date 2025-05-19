@@ -8,38 +8,38 @@ import { useState, useEffect } from "react"
 import DashboardHeader from "./components/dashboard-header"
 import SearchBar from "./components/search-bar"
 import FilterBar from "./components/filter-bar"
-import TopClientsSection from "./components/top-clients-section"
-import ClientsTable from "./components/clients-table"
+import StatsSection from "./components/stats-section"
+import VehiclesTable from "./components/vehicles-table"
 import Pagination from "./components/pagination"
 import Modal from "./components/modal"
-import ClientDetails from "./components/client-details"
+import VehicleDetails from "./components/vehicle-details"
 import DeleteConfirmation from "./components/delete-confirmation"
 import AlertMessage from "./components/alert-message"
 import LoadingSpinner from "./components/loading-spinner"
 import ErrorState from "./components/error-state"
 import EmptyState from "./components/empty-state"
 import SideDrawer from "./components/side-drawer"
-import ClientsBackground from "./components/clients-background"
-import CompactClientForm from "./components/compact-client-form"
+import VehiclesBackground from "./components/vehicles-background"
+import CompactVehicleForm from "./components/compact-vehicle-form"
 import type { ErrorRecord } from "./components/error-history"
 
 // Hooks
-import useClientApi from "./hooks/use-client-api"
+import useVehicleApi from "./hooks/use-vehicle-api"
 import usePagination from "./hooks/use-pagination"
-import useSearch from "./hooks/use-search"
-import useForm from "./hooks/use-form"
+import useVehicleSearch from "./hooks/use-vehicle-search"
+import useVehicleForm from "./hooks/use-vehicle-form"
 import useModal from "./hooks/use-modal"
 
 // Types
-import type { FilterType, Client } from "./types/client"
+import type { FilterType } from "./types/vehicle"
 
 // Constants
-const CLIENTS_PER_PAGE = 8
+const VEHICLES_PER_PAGE = 8
 const MAX_ERROR_HISTORY = 10
 
-export default function ClientDashboard() {
-  // State for top clients toggle
-  const [showTopClients, setShowTopClients] = useState(false)
+export default function VehicleDashboard() {
+  // State for stats toggle
+  const [showStats, setShowStats] = useState(false)
 
   // State for filtering
   const [isFiltering, setIsFiltering] = useState(false)
@@ -52,7 +52,7 @@ export default function ClientDashboard() {
 
   // State for side drawer (details)
   const [showDetailsDrawer, setShowDetailsDrawer] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
 
   // State for form errors
   const [formApiError, setFormApiError] = useState<string | null>(null)
@@ -63,31 +63,39 @@ export default function ClientDashboard() {
 
   // API and data hooks
   const {
-    clients,
-    topClients,
+    vehicles,
+    unusedVehicles,
+    typeAverages,
     loading,
     error,
     showAlert,
     alertMessage,
     alertType,
-    fetchClients,
-    fetchFilteredClients,
-    createClient,
-    updateClient,
-    deleteClient,
-  } = useClientApi()
+    fetchVehicles,
+    fetchFilteredVehicles,
+    createVehicle,
+    updateVehicle,
+    deleteVehicle,
+  } = useVehicleApi()
 
   // Search hook
-  const { searchTerm, filteredClients, handleSearchChange, clearSearch } = useSearch(clients)
+  const { searchTerm, filteredVehicles, handleSearchChange, clearSearch } = useVehicleSearch(vehicles)
 
   // Pagination hook
-  const { currentPage, totalPages, getCurrentPageItems, goToPage } = usePagination(filteredClients, CLIENTS_PER_PAGE)
+  const { currentPage, totalPages, getCurrentPageItems, goToPage } = usePagination(filteredVehicles, VEHICLES_PER_PAGE)
 
   // Form hook
-  const { formData, formErrors, handleInputChange, validateForm, resetForm, setFormFromClient } = useForm()
+  const { formData, formErrors, handleInputChange, validateForm, resetForm, setFormFromVehicle } = useVehicleForm()
 
   // Modal hook (solo para confirmación de eliminación)
-  const { showModal, modalMode, currentClient, openModal, closeModal, updateCurrentClient } = useModal()
+  const {
+    showModal,
+    modalMode,
+    currentClient: currentVehicle,
+    openModal,
+    closeModal,
+    updateCurrentClient: updateCurrentVehicle,
+  } = useModal()
 
   // Effect to animate main content when drawer opens/closes
   useEffect(() => {
@@ -103,9 +111,9 @@ export default function ClientDashboard() {
     }
   }, [showFormDrawer, showDetailsDrawer])
 
-  // Toggle top clients view
-  const toggleTopClients = () => {
-    setShowTopClients(!showTopClients)
+  // Toggle stats view
+  const toggleStats = () => {
+    setShowStats(!showStats)
   }
 
   // Función para añadir un error al historial
@@ -130,7 +138,7 @@ export default function ClientDashboard() {
   const clearApiError = () => {
     if (formApiError) {
       // Añadir el error actual al historial antes de limpiarlo
-      addErrorToHistory(formApiError, drawerMode === "create" ? "Crear Cliente" : "Actualizar Cliente")
+      addErrorToHistory(formApiError, drawerMode === "create" ? "Crear Vehículo" : "Actualizar Vehículo")
       setFormApiError(null)
     }
   }
@@ -156,12 +164,13 @@ export default function ClientDashboard() {
 
     let success = false
     let errorMessage = null
+    const operation = drawerMode === "create" ? "Crear Vehículo" : "Actualizar Vehículo"
 
     try {
       if (drawerMode === "create") {
-        success = await createClient(formData)
-      } else if (drawerMode === "edit" && currentClient) {
-        success = await updateClient(currentClient.id, formData)
+        success = await createVehicle(formData)
+      } else if (drawerMode === "edit" && currentVehicle) {
+        success = await updateVehicle(currentVehicle.id, formData)
       }
 
       if (success) {
@@ -188,12 +197,12 @@ export default function ClientDashboard() {
     }
   }
 
-  // Handle delete client
-  const handleDeleteClient = async () => {
-    if (!currentClient) return
+  // Handle delete vehicle
+  const handleDeleteVehicle = async () => {
+    if (!currentVehicle) return
 
     try {
-      const success = await deleteClient(currentClient.id)
+      const success = await deleteVehicle(currentVehicle.id)
 
       if (success) {
         closeModal()
@@ -214,12 +223,12 @@ export default function ClientDashboard() {
       }
 
       // Añadir al historial de errores
-      addErrorToHistory(errorMessage, "Eliminar Cliente")
+      addErrorToHistory(errorMessage, "Eliminar Vehículo")
     }
   }
 
   // Open form drawer with appropriate mode
-  const openFormDrawer = (mode: "create" | "edit", client: Client | null = null) => {
+  const openFormDrawer = (mode: "create" | "edit", vehicle = null) => {
     // Cerrar el drawer de detalles si está abierto
     if (showDetailsDrawer) {
       setShowDetailsDrawer(false)
@@ -230,12 +239,12 @@ export default function ClientDashboard() {
 
     if (mode === "create") {
       resetForm()
-    } else if (client) {
-      setFormFromClient(client)
+    } else if (vehicle) {
+      setFormFromVehicle(vehicle)
     }
 
     setDrawerMode(mode)
-    updateCurrentClient(client)
+    updateCurrentVehicle(vehicle)
     setShowFormDrawer(true)
   }
 
@@ -243,7 +252,7 @@ export default function ClientDashboard() {
   const closeFormDrawer = () => {
     // Si hay un error actual, añadirlo al historial antes de cerrar
     if (formApiError) {
-      addErrorToHistory(formApiError, drawerMode === "create" ? "Crear Cliente" : "Actualizar Cliente")
+      addErrorToHistory(formApiError, drawerMode === "create" ? "Crear Vehículo" : "Actualizar Vehículo")
     }
 
     setShowFormDrawer(false)
@@ -251,13 +260,13 @@ export default function ClientDashboard() {
   }
 
   // Open details drawer
-  const openDetailsDrawer = (client: any) => {
+  const openDetailsDrawer = (vehicle: any) => {
     // Cerrar el drawer de formulario si está abierto
     if (showFormDrawer) {
       setShowFormDrawer(false)
     }
 
-    setSelectedClient(client)
+    setSelectedVehicle(vehicle)
     setShowDetailsDrawer(true)
   }
 
@@ -268,18 +277,18 @@ export default function ClientDashboard() {
 
   // Get drawer title based on mode
   const getFormDrawerTitle = () => {
-    return drawerMode === "create" ? "Crear Nuevo Cliente" : "Editar Cliente"
+    return drawerMode === "create" ? "Crear Nuevo Vehículo" : "Editar Vehículo"
   }
 
   // Handle edit from view mode
   const handleEditFromDetails = () => {
     closeDetailsDrawer()
-    setTimeout(() => openFormDrawer("edit", selectedClient), 100)
+    setTimeout(() => openFormDrawer("edit", selectedVehicle), 100)
   }
 
   // Open delete confirmation modal
-  const openDeleteModal = (client: any) => {
-    openModal("delete", client)
+  const openDeleteModal = (vehicle: any) => {
+    openModal("delete", vehicle)
   }
 
   // Handle filter application
@@ -295,7 +304,7 @@ export default function ClientDashboard() {
     }
 
     setIsFiltering(true)
-    fetchFilteredClients(filterType, filterValue)
+    fetchFilteredVehicles(filterType, filterValue)
   }
 
   // Handle clearing filter
@@ -303,19 +312,19 @@ export default function ClientDashboard() {
     setIsFiltering(false)
     setActiveFilterType("all")
     setActiveFilterValue("")
-    fetchClients()
+    fetchVehicles()
   }
 
   return (
     <div className="min-h-screen bg-gray-50 font-[Poppins] overflow-x-hidden">
       {/* Fondo con iconos - ahora como primer elemento */}
-      <ClientsBackground iconCount={500} zIndex={0} />
+      <VehiclesBackground iconCount={500} zIndex={0} />
 
       <div className="relative z-10">
         {/* Header */}
         <DashboardHeader
-          showTopClients={showTopClients}
-          toggleTopClients={toggleTopClients}
+          showStats={showStats}
+          toggleStats={toggleStats}
           openCreateModal={() => openFormDrawer("create")}
         />
 
@@ -324,7 +333,7 @@ export default function ClientDashboard() {
 
         {/* Side Drawer para formulario */}
         <SideDrawer show={showFormDrawer} title={getFormDrawerTitle()} onClose={closeFormDrawer}>
-          <CompactClientForm
+          <CompactVehicleForm
             formData={formData}
             formErrors={formErrors}
             loading={loading}
@@ -340,10 +349,10 @@ export default function ClientDashboard() {
           />
         </SideDrawer>
 
-        {/* Side Drawer para detalles del cliente */}
-        <SideDrawer show={showDetailsDrawer} title="Detalles del Cliente" onClose={closeDetailsDrawer}>
-          {selectedClient && (
-            <ClientDetails client={selectedClient} onClose={closeDetailsDrawer} onEdit={handleEditFromDetails} />
+        {/* Side Drawer para detalles del vehículo */}
+        <SideDrawer show={showDetailsDrawer} title="Detalles del Vehículo" onClose={closeDetailsDrawer}>
+          {selectedVehicle && (
+            <VehicleDetails vehicle={selectedVehicle} onClose={closeDetailsDrawer} onEdit={handleEditFromDetails} />
           )}
         </SideDrawer>
 
@@ -357,30 +366,32 @@ export default function ClientDashboard() {
             <SearchBar
               searchTerm={searchTerm}
               onSearchChange={handleSearchChange}
-              totalItems={filteredClients.length}
+              totalItems={filteredVehicles.length}
               currentPage={currentPage}
-              itemsPerPage={CLIENTS_PER_PAGE}
+              itemsPerPage={VEHICLES_PER_PAGE}
             />
 
-            {/* Top clients section */}
-            <TopClientsSection topClients={topClients} show={showTopClients} />
+            {/* Stats section */}
+            <StatsSection unusedVehicles={unusedVehicles} typeAverages={typeAverages} show={showStats} />
 
-            {/* Clients data grid */}
+            {/* Vehicles data grid */}
             <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-6 transition-all duration-300 hover:shadow-lg">
               {isFiltering && (
                 <div className="mb-4 p-2 bg-gray-100/90 rounded-md flex items-center justify-between">
                   <div className="flex items-center">
                     <span className="text-sm text-gray-500 mr-2">Filtro activo:</span>
                     <span className="font-medium">
-                      {activeFilterType === "nombre"
-                        ? "Nombre"
-                        : activeFilterType === "documento"
-                          ? "Documento"
-                          : activeFilterType === "email"
-                            ? "Email"
-                            : "Todos"}
+                      {activeFilterType === "marca"
+                        ? "Marca"
+                        : activeFilterType === "matricula"
+                          ? "Matrícula"
+                          : activeFilterType === "tipo"
+                            ? "Tipo"
+                            : activeFilterType === "disponible"
+                              ? "Disponibles"
+                              : "Todos"}
                     </span>
-                    {activeFilterValue && (
+                    {activeFilterValue && activeFilterType !== "disponible" && (
                       <>
                         <span className="mx-2">|</span>
                         <span className="font-medium">{activeFilterValue}</span>
@@ -401,18 +412,18 @@ export default function ClientDashboard() {
               ) : error ? (
                 <ErrorState
                   message={error}
-                  onRetry={isFiltering ? () => handleFilter(activeFilterType, activeFilterValue) : fetchClients}
+                  onRetry={isFiltering ? () => handleFilter(activeFilterType, activeFilterValue) : fetchVehicles}
                 />
-              ) : filteredClients.length === 0 ? (
+              ) : filteredVehicles.length === 0 ? (
                 <EmptyState searchTerm={searchTerm} onClearSearch={clearSearch} />
               ) : (
                 <>
                   <div className="overflow-x-auto">
-                    <ClientsTable
-                      clients={getCurrentPageItems()}
-                      onView={(client) => openDetailsDrawer(client)}
-                      onEdit={(client) => openFormDrawer("edit", client)}
-                      onDelete={(client) => openDeleteModal(client)}
+                    <VehiclesTable
+                      vehicles={getCurrentPageItems()}
+                      onView={(vehicle) => openDetailsDrawer(vehicle)}
+                      onEdit={(vehicle) => openFormDrawer("edit", vehicle)}
+                      onDelete={(vehicle) => openDeleteModal(vehicle)}
                     />
                   </div>
 
@@ -425,12 +436,12 @@ export default function ClientDashboard() {
         </div>
 
         {/* Modal solo para confirmación de eliminación */}
-        <Modal show={showModal && modalMode === "delete"} title="Eliminar Cliente" onClose={closeModal}>
-          {modalMode === "delete" && currentClient && (
+        <Modal show={showModal && modalMode === "delete"} title="Eliminar Vehículo" onClose={closeModal}>
+          {modalMode === "delete" && currentVehicle && (
             <DeleteConfirmation
-              client={currentClient}
+              vehicle={currentVehicle}
               loading={loading}
-              onConfirm={handleDeleteClient}
+              onConfirm={handleDeleteVehicle}
               onCancel={closeModal}
             />
           )}

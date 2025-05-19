@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
-import type { Client, FormData, AlertType, FilterType } from "../types/client"
+import type { Client, FormData, AlertType, FilterType } from "../types/client.ts"
 import { API_BASE_URL } from "../config/api"
 
 export default function useClientApi() {

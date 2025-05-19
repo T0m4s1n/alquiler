@@ -348,7 +348,7 @@ export default function CarLoadingAnimation() {
               </div>
               
               <button 
-                onClick={() => handleNavigation('/alquileres')}
+                onClick={() => handleNavigation('/rental')}
                 className="mt-4 px-8 py-3 bg-white hover:bg-gray-200 text-[#333] rounded-full transition-all duration-300 uppercase tracking-wider text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 font-[Poppins]"
               >
                 Gestionar Alquileres

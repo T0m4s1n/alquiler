@@ -5,41 +5,44 @@ import type React from "react"
 import { useState, useEffect } from "react"
 
 // Components
-import DashboardHeader from "./components/dashboard-header"
+import RentalDashboardHeader from "./components/rental-dashboard-header"
 import SearchBar from "./components/search-bar"
-import FilterBar from "./components/filter-bar"
-import TopClientsSection from "./components/top-clients-section"
-import ClientsTable from "./components/clients-table"
+import RentalFilterBar from "./components/rental-filter-bar"
+import RentalCalendar from "./components/rental-calendar"
+import RentalsTable from "./components/rentals-table"
+import IncomeChart from "./components/income-chart"
 import Pagination from "./components/pagination"
 import Modal from "./components/modal"
-import ClientDetails from "./components/client-details"
+import RentalDetails from "./components/rental-details"
+import CompleteRentalModal from "./components/complete-rental-modal"
 import DeleteConfirmation from "./components/delete-confirmation"
 import AlertMessage from "./components/alert-message"
 import LoadingSpinner from "./components/loading-spinner"
 import ErrorState from "./components/error-state"
 import EmptyState from "./components/empty-state"
 import SideDrawer from "./components/side-drawer"
-import ClientsBackground from "./components/clients-background"
-import CompactClientForm from "./components/compact-client-form"
+import RentalForm from "./components/rental-form"
+import RentalsBackground from "./components/rentals-background"
 import type { ErrorRecord } from "./components/error-history"
 
 // Hooks
+import useRentalApi from "./hooks/use-rental-api"
 import useClientApi from "./hooks/use-client-api"
+import useVehicleApi from "./hooks/use-vehicle-api"
 import usePagination from "./hooks/use-pagination"
-import useSearch from "./hooks/use-search"
-import useForm from "./hooks/use-form"
+import useRentalForm from "./hooks/use-rental-form"
 import useModal from "./hooks/use-modal"
 
 // Types
-import type { FilterType, Client } from "./types/client"
+import type { FilterType, Rental } from "./types/rental"
 
 // Constants
-const CLIENTS_PER_PAGE = 8
+const RENTALS_PER_PAGE = 8
 const MAX_ERROR_HISTORY = 10
 
-export default function ClientDashboard() {
-  // State for top clients toggle
-  const [showTopClients, setShowTopClients] = useState(false)
+export default function RentalDashboard() {
+  // State for calendar toggle
+  const [showCalendar, setShowCalendar] = useState(false)
 
   // State for filtering
   const [isFiltering, setIsFiltering] = useState(false)
@@ -52,7 +55,11 @@ export default function ClientDashboard() {
 
   // State for side drawer (details)
   const [showDetailsDrawer, setShowDetailsDrawer] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [selectedRental, setSelectedRental] = useState<Rental | null>(null)
+
+  // State for complete rental modal
+  const [showCompleteModal, setShowCompleteModal] = useState(false)
+  const [rentalToComplete, setRentalToComplete] = useState<Rental | null>(null)
 
   // State for form errors
   const [formApiError, setFormApiError] = useState<string | null>(null)
@@ -61,33 +68,70 @@ export default function ClientDashboard() {
   // State for main content
   const [mainContentClass, setMainContentClass] = useState("")
 
+  // State for search
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filteredRentals, setFilteredRentals] = useState<Rental[]>([])
+
   // API and data hooks
   const {
-    clients,
-    topClients,
+    rentals,
+    overdueRentals,
+    monthlyIncome,
     loading,
     error,
     showAlert,
     alertMessage,
     alertType,
-    fetchClients,
-    fetchFilteredClients,
-    createClient,
-    updateClient,
-    deleteClient,
-  } = useClientApi()
+    fetchRentals,
+    fetchFilteredRentals,
+    createRental,
+    updateRental,
+    completeRental,
+    cancelRental,
+    activateRental,
+    deleteRental,
+  } = useRentalApi()
 
-  // Search hook
-  const { searchTerm, filteredClients, handleSearchChange, clearSearch } = useSearch(clients)
+  // Client and vehicle API hooks
+  const { clients, fetchClients } = useClientApi()
+  const { vehicles, fetchVehicles } = useVehicleApi()
 
   // Pagination hook
-  const { currentPage, totalPages, getCurrentPageItems, goToPage } = usePagination(filteredClients, CLIENTS_PER_PAGE)
+  const { currentPage, totalPages, getCurrentPageItems, goToPage } = usePagination(filteredRentals, RENTALS_PER_PAGE)
 
   // Form hook
-  const { formData, formErrors, handleInputChange, validateForm, resetForm, setFormFromClient } = useForm()
+  const { formData, formErrors, handleInputChange, validateForm, resetForm, setFormFromRental } = useRentalForm()
 
   // Modal hook (solo para confirmación de eliminación)
-  const { showModal, modalMode, currentClient, openModal, closeModal, updateCurrentClient } = useModal()
+  const {
+    showModal,
+    modalMode,
+    currentClient: currentRental,
+    openModal,
+    closeModal,
+    updateCurrentClient: updateCurrentRental,
+  } = useModal()
+
+  // Fetch clients and vehicles on mount
+  useEffect(() => {
+    fetchClients()
+    fetchVehicles()
+  }, [])
+
+  // Filter rentals based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredRentals(rentals)
+    } else {
+      const filtered = rentals.filter(
+        (rental) =>
+          rental.nombreCliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          rental.detalleVehiculo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          rental.estado.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+      setFilteredRentals(filtered)
+    }
+  }, [searchTerm, rentals])
 
   // Effect to animate main content when drawer opens/closes
   useEffect(() => {
@@ -103,9 +147,9 @@ export default function ClientDashboard() {
     }
   }, [showFormDrawer, showDetailsDrawer])
 
-  // Toggle top clients view
-  const toggleTopClients = () => {
-    setShowTopClients(!showTopClients)
+  // Toggle calendar view
+  const toggleCalendar = () => {
+    setShowCalendar(!showCalendar)
   }
 
   // Función para añadir un error al historial
@@ -130,7 +174,7 @@ export default function ClientDashboard() {
   const clearApiError = () => {
     if (formApiError) {
       // Añadir el error actual al historial antes de limpiarlo
-      addErrorToHistory(formApiError, drawerMode === "create" ? "Crear Cliente" : "Actualizar Cliente")
+      addErrorToHistory(formApiError, drawerMode === "create" ? "Crear Alquiler" : "Actualizar Alquiler")
       setFormApiError(null)
     }
   }
@@ -145,6 +189,16 @@ export default function ClientDashboard() {
     setErrorHistory((prev) => prev.filter((err) => err.id !== id))
   }
 
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchTerm("")
+  }
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -156,12 +210,13 @@ export default function ClientDashboard() {
 
     let success = false
     let errorMessage = null
+    const operation = drawerMode === "create" ? "Crear Alquiler" : "Actualizar Alquiler"
 
     try {
       if (drawerMode === "create") {
-        success = await createClient(formData)
-      } else if (drawerMode === "edit" && currentClient) {
-        success = await updateClient(currentClient.id, formData)
+        success = await createRental(formData)
+      } else if (drawerMode === "edit" && currentRental) {
+        success = await updateRental(currentRental.id, formData)
       }
 
       if (success) {
@@ -188,12 +243,12 @@ export default function ClientDashboard() {
     }
   }
 
-  // Handle delete client
-  const handleDeleteClient = async () => {
-    if (!currentClient) return
+  // Handle delete rental
+  const handleDeleteRental = async () => {
+    if (!currentRental) return
 
     try {
-      const success = await deleteClient(currentClient.id)
+      const success = await deleteRental(currentRental.id)
 
       if (success) {
         closeModal()
@@ -214,12 +269,91 @@ export default function ClientDashboard() {
       }
 
       // Añadir al historial de errores
-      addErrorToHistory(errorMessage, "Eliminar Cliente")
+      addErrorToHistory(errorMessage, "Eliminar Alquiler")
+    }
+  }
+
+  // Handle complete rental
+  const handleCompleteRental = async (returnDate: string) => {
+    if (!rentalToComplete) return
+
+    try {
+      const success = await completeRental(rentalToComplete.id, returnDate)
+
+      if (success) {
+        setShowCompleteModal(false)
+        setRentalToComplete(null)
+      }
+    } catch (err: any) {
+      // Capturar el mensaje de error
+      let errorMessage = err.message || "Error desconocido"
+
+      // Si el error tiene una respuesta del servidor
+      if (err.response && err.response.data) {
+        if (typeof err.response.data.message === "string") {
+          errorMessage = err.response.data.message
+        } else if (typeof err.response.data.error === "string") {
+          errorMessage = err.response.data.error
+        } else if (typeof err.response.data === "string") {
+          errorMessage = err.response.data
+        }
+      }
+
+      // Añadir al historial de errores
+      addErrorToHistory(errorMessage, "Completar Alquiler")
+    }
+  }
+
+  // Handle cancel rental
+  const handleCancelRental = async (rental: Rental) => {
+    try {
+      await cancelRental(rental.id)
+    } catch (err: any) {
+      // Capturar el mensaje de error
+      let errorMessage = err.message || "Error desconocido"
+
+      // Si el error tiene una respuesta del servidor
+      if (err.response && err.response.data) {
+        if (typeof err.response.data.message === "string") {
+          errorMessage = err.response.data.message
+        } else if (typeof err.response.data.error === "string") {
+          errorMessage = err.response.data.error
+        } else if (typeof err.response.data === "string") {
+          errorMessage = err.response.data
+        }
+      }
+
+      // Añadir al historial de errores
+      addErrorToHistory(errorMessage, "Cancelar Alquiler")
+    }
+  }
+
+  // Handle activate rental
+  const handleActivateRental = async (rental: Rental) => {
+    try {
+      await activateRental(rental.id)
+    } catch (err: any) {
+      // Capturar el mensaje de error
+      let errorMessage = err.message || "Error desconocido"
+
+      // Si el error tiene una respuesta del servidor
+      if (err.response && err.response.data) {
+        if (typeof err.response.data.message === "string") {
+          errorMessage = err.response.data.message
+        } else if (typeof err.response.data.error === "string") {
+          errorMessage = err.response.data.error
+        } else if (typeof err.response.data === "string") {
+          errorMessage = err.response.data
+        }
+      }
+
+      // Añadir al historial de errores
+      addErrorToHistory(errorMessage, "Activar Alquiler")
     }
   }
 
   // Open form drawer with appropriate mode
-  const openFormDrawer = (mode: "create" | "edit", client: Client | null = null) => {
+  const openFormDrawer = (mode: "create" | "edit", rental = null) => {
     // Cerrar el drawer de detalles si está abierto
     if (showDetailsDrawer) {
       setShowDetailsDrawer(false)
@@ -230,12 +364,12 @@ export default function ClientDashboard() {
 
     if (mode === "create") {
       resetForm()
-    } else if (client) {
-      setFormFromClient(client)
+    } else if (rental) {
+      setFormFromRental(rental)
     }
 
     setDrawerMode(mode)
-    updateCurrentClient(client)
+    updateCurrentRental(rental)
     setShowFormDrawer(true)
   }
 
@@ -243,7 +377,7 @@ export default function ClientDashboard() {
   const closeFormDrawer = () => {
     // Si hay un error actual, añadirlo al historial antes de cerrar
     if (formApiError) {
-      addErrorToHistory(formApiError, drawerMode === "create" ? "Crear Cliente" : "Actualizar Cliente")
+      addErrorToHistory(formApiError, drawerMode === "create" ? "Crear Alquiler" : "Actualizar Alquiler")
     }
 
     setShowFormDrawer(false)
@@ -251,13 +385,13 @@ export default function ClientDashboard() {
   }
 
   // Open details drawer
-  const openDetailsDrawer = (client: any) => {
+  const openDetailsDrawer = (rental: Rental) => {
     // Cerrar el drawer de formulario si está abierto
     if (showFormDrawer) {
       setShowFormDrawer(false)
     }
 
-    setSelectedClient(client)
+    setSelectedRental(rental)
     setShowDetailsDrawer(true)
   }
 
@@ -268,18 +402,24 @@ export default function ClientDashboard() {
 
   // Get drawer title based on mode
   const getFormDrawerTitle = () => {
-    return drawerMode === "create" ? "Crear Nuevo Cliente" : "Editar Cliente"
+    return drawerMode === "create" ? "Crear Nuevo Alquiler" : "Editar Alquiler"
   }
 
   // Handle edit from view mode
   const handleEditFromDetails = () => {
     closeDetailsDrawer()
-    setTimeout(() => openFormDrawer("edit", selectedClient), 100)
+    setTimeout(() => openFormDrawer("edit", selectedRental), 100)
   }
 
   // Open delete confirmation modal
-  const openDeleteModal = (client: any) => {
-    openModal("delete", client)
+  const openDeleteModal = (rental: Rental) => {
+    openModal("delete", rental)
+  }
+
+  // Open complete rental modal
+  const openCompleteModal = (rental: Rental) => {
+    setRentalToComplete(rental)
+    setShowCompleteModal(true)
   }
 
   // Handle filter application
@@ -295,7 +435,7 @@ export default function ClientDashboard() {
     }
 
     setIsFiltering(true)
-    fetchFilteredClients(filterType, filterValue)
+    fetchFilteredRentals(filterType, filterValue)
   }
 
   // Handle clearing filter
@@ -303,19 +443,19 @@ export default function ClientDashboard() {
     setIsFiltering(false)
     setActiveFilterType("all")
     setActiveFilterValue("")
-    fetchClients()
+    fetchRentals()
   }
 
   return (
     <div className="min-h-screen bg-gray-50 font-[Poppins] overflow-x-hidden">
-      {/* Fondo con iconos - ahora como primer elemento */}
-      <ClientsBackground iconCount={500} zIndex={0} />
+      {/* Fondo con iconos de alquileres */}
+      <RentalsBackground iconCount={500} zIndex={0}/>
 
       <div className="relative z-10">
         {/* Header */}
-        <DashboardHeader
-          showTopClients={showTopClients}
-          toggleTopClients={toggleTopClients}
+        <RentalDashboardHeader
+          showCalendar={showCalendar}
+          toggleCalendar={toggleCalendar}
           openCreateModal={() => openFormDrawer("create")}
         />
 
@@ -324,13 +464,15 @@ export default function ClientDashboard() {
 
         {/* Side Drawer para formulario */}
         <SideDrawer show={showFormDrawer} title={getFormDrawerTitle()} onClose={closeFormDrawer}>
-          <CompactClientForm
+          <RentalForm
             formData={formData}
             formErrors={formErrors}
             loading={loading}
             modalMode={drawerMode}
             apiError={formApiError}
             errorHistory={errorHistory}
+            clients={clients}
+            vehicles={vehicles}
             onInputChange={handleInputChange}
             onSubmit={handleSubmit}
             onCancel={closeFormDrawer}
@@ -340,10 +482,17 @@ export default function ClientDashboard() {
           />
         </SideDrawer>
 
-        {/* Side Drawer para detalles del cliente */}
-        <SideDrawer show={showDetailsDrawer} title="Detalles del Cliente" onClose={closeDetailsDrawer}>
-          {selectedClient && (
-            <ClientDetails client={selectedClient} onClose={closeDetailsDrawer} onEdit={handleEditFromDetails} />
+        {/* Side Drawer para detalles del alquiler */}
+        <SideDrawer show={showDetailsDrawer} title="Detalles del Alquiler" onClose={closeDetailsDrawer}>
+          {selectedRental && (
+            <RentalDetails
+              rental={selectedRental}
+              onClose={closeDetailsDrawer}
+              onEdit={handleEditFromDetails}
+              onComplete={() => openCompleteModal(selectedRental)}
+              onCancel={() => handleCancelRental(selectedRental)}
+              onActivate={() => handleActivateRental(selectedRental)}
+            />
           )}
         </SideDrawer>
 
@@ -351,34 +500,47 @@ export default function ClientDashboard() {
         <div className={`flex justify-center transition-all duration-700 ease-in-out ${mainContentClass}`}>
           <main className="container max-w-5xl mx-auto py-8 px-4">
             {/* Filter bar */}
-            <FilterBar onFilter={handleFilter} onClearFilter={handleClearFilter} isFiltering={isFiltering} />
+            <RentalFilterBar onFilter={handleFilter} onClearFilter={handleClearFilter} isFiltering={isFiltering} />
 
             {/* Search and filters */}
             <SearchBar
               searchTerm={searchTerm}
               onSearchChange={handleSearchChange}
-              totalItems={filteredClients.length}
+              totalItems={filteredRentals.length}
               currentPage={currentPage}
-              itemsPerPage={CLIENTS_PER_PAGE}
+              itemsPerPage={RENTALS_PER_PAGE}
             />
 
-            {/* Top clients section */}
-            <TopClientsSection topClients={topClients} show={showTopClients} />
+            {/* Income chart */}
+            {monthlyIncome.length > 0 && (
+              <div className="mb-8">
+                <IncomeChart data={monthlyIncome} />
+              </div>
+            )}
 
-            {/* Clients data grid */}
+            {/* Calendar view */}
+            {showCalendar && (
+              <div className="mb-8">
+                <RentalCalendar rentals={rentals} onEventClick={openDetailsDrawer} />
+              </div>
+            )}
+
+            {/* Rentals data grid */}
             <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-6 transition-all duration-300 hover:shadow-lg">
               {isFiltering && (
                 <div className="mb-4 p-2 bg-gray-100/90 rounded-md flex items-center justify-between">
                   <div className="flex items-center">
                     <span className="text-sm text-gray-500 mr-2">Filtro activo:</span>
                     <span className="font-medium">
-                      {activeFilterType === "nombre"
-                        ? "Nombre"
-                        : activeFilterType === "documento"
-                          ? "Documento"
-                          : activeFilterType === "email"
-                            ? "Email"
-                            : "Todos"}
+                      {activeFilterType === "cliente"
+                        ? "Cliente"
+                        : activeFilterType === "vehiculo"
+                          ? "Vehículo"
+                          : activeFilterType === "estado"
+                            ? "Estado"
+                            : activeFilterType === "fecha"
+                              ? "Fecha"
+                              : "Todos"}
                     </span>
                     {activeFilterValue && (
                       <>
@@ -401,18 +563,21 @@ export default function ClientDashboard() {
               ) : error ? (
                 <ErrorState
                   message={error}
-                  onRetry={isFiltering ? () => handleFilter(activeFilterType, activeFilterValue) : fetchClients}
+                  onRetry={isFiltering ? () => handleFilter(activeFilterType, activeFilterValue) : fetchRentals}
                 />
-              ) : filteredClients.length === 0 ? (
+              ) : filteredRentals.length === 0 ? (
                 <EmptyState searchTerm={searchTerm} onClearSearch={clearSearch} />
               ) : (
                 <>
                   <div className="overflow-x-auto">
-                    <ClientsTable
-                      clients={getCurrentPageItems()}
-                      onView={(client) => openDetailsDrawer(client)}
-                      onEdit={(client) => openFormDrawer("edit", client)}
-                      onDelete={(client) => openDeleteModal(client)}
+                    <RentalsTable
+                      rentals={getCurrentPageItems()}
+                      onView={(rental) => openDetailsDrawer(rental)}
+                      onEdit={(rental) => openFormDrawer("edit", rental)}
+                      onDelete={(rental) => openDeleteModal(rental)}
+                      onComplete={(rental) => openCompleteModal(rental)}
+                      onCancel={(rental) => handleCancelRental(rental)}
+                      onActivate={(rental) => handleActivateRental(rental)}
                     />
                   </div>
 
@@ -424,14 +589,26 @@ export default function ClientDashboard() {
           </main>
         </div>
 
-        {/* Modal solo para confirmación de eliminación */}
-        <Modal show={showModal && modalMode === "delete"} title="Eliminar Cliente" onClose={closeModal}>
-          {modalMode === "delete" && currentClient && (
+        {/* Modal para confirmación de eliminación */}
+        <Modal show={showModal && modalMode === "delete"} title="Eliminar Alquiler" onClose={closeModal}>
+          {modalMode === "delete" && currentRental && (
             <DeleteConfirmation
-              client={currentClient}
+              rental={currentRental}
               loading={loading}
-              onConfirm={handleDeleteClient}
+              onConfirm={handleDeleteRental}
               onCancel={closeModal}
+            />
+          )}
+        </Modal>
+
+        {/* Modal para completar alquiler */}
+        <Modal show={showCompleteModal} title="Completar Alquiler" onClose={() => setShowCompleteModal(false)}>
+          {rentalToComplete && (
+            <CompleteRentalModal
+              rental={rentalToComplete}
+              loading={loading}
+              onConfirm={handleCompleteRental}
+              onCancel={() => setShowCompleteModal(false)}
             />
           )}
         </Modal>

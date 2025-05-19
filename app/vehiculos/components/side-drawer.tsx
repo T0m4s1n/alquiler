@@ -47,7 +47,7 @@ export default function SideDrawer({ show, title, onClose, children }: SideDrawe
         style={{
           top: `calc(${headerHeight} + 60px)`, // Aumentar a 60px de espacio después del header
           boxShadow: show ? "0 0 50px rgba(0, 0, 0, 0.2)" : "none",
-          height: `calc(100vh - ${headerHeight} - 64px)`, // Altura fija en lugar de maxHeight
+          height: `calc(100vh - ${headerHeight} - 62px)`, // Altura fija en lugar de maxHeight
         }}
       >
         {/* Header del drawer con animación */}
