@@ -80,6 +80,9 @@ export default function ClientDashboard() {
   // Search hook
   const { searchTerm, filteredClients, handleSearchChange, clearSearch } = useSearch(clients)
 
+  // Verificar si hay una búsqueda activa
+  const isSearchActive = searchTerm.trim() !== ""
+
   // Pagination hook
   const { currentPage, totalPages, getCurrentPageItems, goToPage } = usePagination(filteredClients, CLIENTS_PER_PAGE)
 
@@ -305,6 +308,17 @@ export default function ClientDashboard() {
     setActiveFilterValue("")
     fetchClients()
   }
+  
+  // Obtener los clientes a mostrar (todos los filtrados si hay búsqueda activa, o solo la página actual)
+  const getDisplayedClients = () => {
+    // Si hay búsqueda activa, mostramos todos los resultados filtrados
+    if (isSearchActive) {
+      return filteredClients
+    }
+    
+    // Si no hay búsqueda, mostramos solo la página actual
+    return getCurrentPageItems()
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 font-[Poppins] overflow-x-hidden">
@@ -360,6 +374,7 @@ export default function ClientDashboard() {
               totalItems={filteredClients.length}
               currentPage={currentPage}
               itemsPerPage={CLIENTS_PER_PAGE}
+              isSearchActive={isSearchActive}
             />
 
             {/* Top clients section */}
@@ -409,15 +424,22 @@ export default function ClientDashboard() {
                 <>
                   <div className="overflow-x-auto">
                     <ClientsTable
-                      clients={getCurrentPageItems()}
+                      clients={getDisplayedClients()}
                       onView={(client) => openDetailsDrawer(client)}
                       onEdit={(client) => openFormDrawer("edit", client)}
                       onDelete={(client) => openDeleteModal(client)}
                     />
                   </div>
 
-                  {/* Pagination */}
-                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={goToPage} />
+                  {/* Pagination - solo se muestra si no hay búsqueda activa */}
+                  {!isSearchActive && (
+                    <Pagination 
+                      currentPage={currentPage} 
+                      totalPages={totalPages} 
+                      onPageChange={goToPage}
+                      isSearchActive={isSearchActive}
+                    />
+                  )}
                 </>
               )}
             </div>

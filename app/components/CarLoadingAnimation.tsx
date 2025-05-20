@@ -68,12 +68,43 @@ export default function CarLoadingAnimation() {
   const router = useRouter();
   const [isLoaded, setIsLoaded] = useState(false);
   const [blurAmount, setBlurAmount] = useState(10); // Initial blur amount
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [showLobby, setShowLobby] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState(0);
-  const [hoveredOption, setHoveredOption] = useState(null);
+  const [hoveredOption, setHoveredOption] = useState<'clientes' | 'vehiculos' | 'alquileres' | null>(null);
+  const [skipAnimation, setSkipAnimation] = useState(false);
 
   useEffect(() => {
+    // Check if animation has already been shown in this browser session
+    const hasSeenAnimation = localStorage.getItem('hasSeenTheCarsAnimation');
+    
+    if (hasSeenAnimation === 'true') {
+      // Skip animation and go straight to lobby
+      setSkipAnimation(true);
+      setBlurAmount(0);
+      setIsLoaded(true);
+      setShowLobby(true);
+      setTransitionPhase(3);
+    } else {
+      // Start animation and set localStorage flag
+      startLoadingAnimation();
+
+      // Set the flag indicating animation has been shown
+      localStorage.setItem('hasSeenTheCarsAnimation', 'true');
+      
+      // Setup event listener to clear localStorage when window/tab is closed
+      const handleBeforeUnload = () => {
+        localStorage.removeItem('hasSeenTheCarsAnimation');
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, []);
+
+  const startLoadingAnimation = () => {
     // Start blur animation immediately
     const blurTimer = setInterval(() => {
       setBlurAmount(prevBlur => {
@@ -98,12 +129,10 @@ export default function CarLoadingAnimation() {
     }, 50);
     
     return () => clearInterval(blurTimer);
-  }, []);
+  };
 
   // Function to handle the transition animation to the lobby
   const startTransition = () => {
-    setIsTransitioning(true);
-    
     // Phase 1: Fade out the title
     setTransitionPhase(1);
     
@@ -121,7 +150,7 @@ export default function CarLoadingAnimation() {
   };
 
   // Handle navigation to different sections
-  const handleNavigation = (route) => {
+  const handleNavigation = (route: string) => {
     // Add a small delay for a better user experience (allowing the button animation to complete)
     setTimeout(() => {
       router.push(route);
@@ -133,76 +162,80 @@ export default function CarLoadingAnimation() {
       backgroundColor: '#333',
       fontFamily: "'Poppins', sans-serif"
     }}>
-      {/* Loading Screen */}
-      <div 
-        className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-1000 ease-in-out ${
-          transitionPhase >= 1 ? 'opacity-0' : 'opacity-100'
-        }`}
-      >
-        <CarStaticBackground opacity={transitionPhase === 0 ? 1 : 0} />
-        
-        <div className="w-full max-w-md z-10 relative p-4 flex flex-col items-center justify-center">
-          {/* River Cars Logo/Title with blur effect */}
-          <div 
-            className="mb-6 text-center text-white transition-all duration-1000 ease-in-out"
-            style={{ 
-              filter: `blur(${blurAmount}px)`,
-              transform: `scale(${1 + blurAmount/20})`,
-              opacity: 1 - (blurAmount / 20)
-            }}
-          >
-            {/* Logo/Icon */}
-            <div className="flex justify-center mb-4">
-              <Car size={64} className="text-white" />
-            </div>
-            
-            {/* Title Text */}
-            <h1 className="text-5xl font-bold tracking-wider font-[Poppins]">
-              RIVER CARS
-            </h1>
-            <p className="text-lg font-light mt-2">
-              Desarrolado por River and T0m4s1n 
-            </p>
-            
-            {/* Tagline that appears as blur reduces */}
-            <p 
-              className="mt-4 text-xl transition-all duration-1000"
+      {/* Loading Screen - Only shown when animation is not skipped */}
+      {!skipAnimation && (
+        <div 
+          className={`absolute inset-0 flex flex-col items-center justify-center transition-all duration-1000 ease-in-out ${
+            transitionPhase >= 1 ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          <CarStaticBackground opacity={transitionPhase === 0 ? 1 : 0} />
+          
+          <div className="w-full max-w-md z-10 relative p-4 flex flex-col items-center justify-center">
+            {/* River Cars Logo/Title with blur effect */}
+            <div 
+              className="mb-6 text-center text-white transition-all duration-1000 ease-in-out"
               style={{ 
-                opacity: 1 - (blurAmount / 5) > 0 ? 1 - (blurAmount / 5) : 0 
+                filter: `blur(${blurAmount}px)`,
+                transform: `scale(${1 + blurAmount/20})`,
+                opacity: 1 - (blurAmount / 20)
               }}
             >
-              Sistema de Gestión de Alquiler
-            </p>
-          </div>
-          
-          {/* Ready Message - appears after blur is complete */}
-          <div 
-            className="text-center text-white text-lg font-medium font-[Poppins] mt-8 transition-opacity duration-700"
-            style={{ opacity: isLoaded ? 1 : 0 }}
-          >
-            {isLoaded ? "¡Bienvenido!" : ""}
+              {/* Logo/Icon */}
+              <div className="flex justify-center mb-4">
+                <Car size={64} className="text-white" />
+              </div>
+              
+              {/* Title Text */}
+              <h1 className="text-5xl font-bold tracking-wider font-[Poppins]">
+                THE CARS
+              </h1>
+              <p className="text-lg font-light mt-2">
+                Desarrolado por el tomasin
+              </p>
+              
+              {/* Tagline that appears as blur reduces */}
+              <p 
+                className="mt-4 text-xl transition-all duration-1000"
+                style={{ 
+                  opacity: 1 - (blurAmount / 5) > 0 ? 1 - (blurAmount / 5) : 0 
+                }}
+              >
+                Sistema de Gestión de Alquiler
+              </p>
+            </div>
+            
+            {/* Ready Message - appears after blur is complete */}
+            <div 
+              className="text-center text-white text-lg font-medium font-[Poppins] mt-8 transition-opacity duration-700"
+              style={{ opacity: isLoaded ? 1 : 0 }}
+            >
+              {isLoaded ? "¡Bienvenido!" : ""}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Transition Element - Simple fade effect */}
-      <div 
-        className={`absolute inset-0 flex items-center justify-center transition-all duration-1000 ease-in-out ${
-          transitionPhase === 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="flex flex-col items-center">
-          <Car 
-            size={96} 
-            className="text-white opacity-70"
-            style={{
-              filter: "drop-shadow(0 0 10px rgba(255,255,255,0.5))"
-            }}
-          />
+      {/* Transition Element - Simple fade effect - Only shown when animation is not skipped */}
+      {!skipAnimation && (
+        <div 
+          className={`absolute inset-0 flex items-center justify-center transition-all duration-1000 ease-in-out ${
+            transitionPhase === 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          <div className="flex flex-col items-center">
+            <Car 
+              size={96} 
+              className="text-white opacity-70"
+              style={{
+                filter: "drop-shadow(0 0 10px rgba(255,255,255,0.5))"
+              }}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Lobby View (shown during transition) */}
+      {/* Lobby View (shown during transition or immediately if skipping animation) */}
       <div 
         className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
           showLobby ? 'opacity-100' : 'opacity-0'

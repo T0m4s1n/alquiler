@@ -11,6 +11,7 @@ type SearchBarProps = {
   totalItems: number
   currentPage: number
   itemsPerPage: number
+  isSearchActive: boolean // Nueva prop para saber si hay búsqueda activa
 }
 
 export default function SearchBar({
@@ -19,8 +20,13 @@ export default function SearchBar({
   totalItems,
   currentPage,
   itemsPerPage,
+  isSearchActive,
 }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false)
+
+  // Ajustamos el contador para mostrar correctamente cuando hay búsqueda activa
+  const startItem = isSearchActive ? 1 : (currentPage - 1) * itemsPerPage + 1;
+  const endItem = isSearchActive ? totalItems : Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-md p-6 mb-8 transition-all duration-300 hover:shadow-lg">
@@ -45,8 +51,9 @@ export default function SearchBar({
 
         <div>
           <p className="text-gray-800">
-            Mostrando {totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} -{" "}
-            {Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} clientes
+            Mostrando {totalItems > 0 ? startItem : 0} -{" "}
+            {endItem} de {totalItems} clientes
+            {isSearchActive && searchTerm && " (filtrados por búsqueda)"}
           </p>
         </div>
       </div>

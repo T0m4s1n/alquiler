@@ -1,9 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import axios from "axios"
+import axios, { AxiosError } from "axios"
 import type { Rental, RentalFormData, AlertType, FilterType, MonthlyIncomeByType } from "../types/rental"
 import { API_BASE_URL } from "../config/api"
+
+interface ErrorResponse {
+  message?: string
+  error?: string
+}
 
 export default function useRentalApi() {
   const [rentals, setRentals] = useState<Rental[]>([])
@@ -25,9 +30,9 @@ export default function useRentalApi() {
   }, [])
 
   // Función para extraer el mensaje de error del backend
-  const extractErrorMessage = (err: any): string => {
+  const extractErrorMessage = (err: AxiosError<ErrorResponse>): string => {
     // Intentar obtener el mensaje de error del backend
-    if (err.response && err.response.data) {
+    if (err.response?.data) {
       // Si el backend devuelve un mensaje específico
       if (typeof err.response.data.message === "string") {
         return err.response.data.message
@@ -57,7 +62,7 @@ export default function useRentalApi() {
       setLoading(false)
       setError(null)
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       setError(errorMessage)
       setLoading(false)
       console.error(err)
@@ -73,20 +78,33 @@ export default function useRentalApi() {
     setLoading(true)
     try {
       let endpoint = `${API_BASE_URL}/api/alquileres`
+      const encodedValue = encodeURIComponent(filterValue.trim())
 
       switch (filterType) {
         case "cliente":
-          endpoint = `${API_BASE_URL}/api/alquileres/cliente/${filterValue}`
+          endpoint = `${API_BASE_URL}/api/alquileres/cliente/${encodedValue}`
           break
         case "vehiculo":
-          endpoint = `${API_BASE_URL}/api/alquileres/vehiculo/${filterValue}`
+          endpoint = `${API_BASE_URL}/api/alquileres/vehiculo/${encodedValue}`
           break
         case "estado":
-          endpoint = `${API_BASE_URL}/api/alquileres/estado/${filterValue}`
+          // Validar que el estado sea uno de los valores permitidos
+          const validStates = ["PENDIENTE", "ACTIVO", "COMPLETADO", "CANCELADO"]
+          if (!validStates.includes(filterValue.toUpperCase())) {
+            throw new Error("Estado de alquiler no válido")
+          }
+          endpoint = `${API_BASE_URL}/api/alquileres/estado/${encodedValue}`
           break
         case "fecha":
-          // Implementar lógica para filtrar por fecha si es necesario
+          // Validar formato de fecha (YYYY-MM-DD)
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+          if (!dateRegex.test(filterValue)) {
+            throw new Error("Formato de fecha inválido. Use YYYY-MM-DD")
+          }
+          endpoint = `${API_BASE_URL}/api/alquileres/fecha/${encodedValue}`
           break
+        default:
+          throw new Error("Tipo de filtro no válido")
       }
 
       const response = await axios.get(endpoint)
@@ -96,7 +114,7 @@ export default function useRentalApi() {
       setLoading(false)
       setError(null)
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       setError(`Error al filtrar los alquileres: ${errorMessage}`)
       setLoading(false)
       console.error(err)
@@ -139,7 +157,7 @@ export default function useRentalApi() {
       setError(null)
       return data
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       setError(errorMessage)
       setLoading(false)
       console.error(err)
@@ -159,7 +177,7 @@ export default function useRentalApi() {
       setError(null)
       return data
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       setError(errorMessage)
       setLoading(false)
       console.error(err)
@@ -189,7 +207,7 @@ export default function useRentalApi() {
       showAlertMessage("Alquiler creado con éxito", "success")
       return true
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       showAlertMessage(`Error al crear el alquiler: ${errorMessage}`, "error")
       console.error(err)
       return false
@@ -209,7 +227,7 @@ export default function useRentalApi() {
       showAlertMessage("Alquiler actualizado con éxito", "success")
       return true
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       showAlertMessage(`Error al actualizar el alquiler: ${errorMessage}`, "error")
       console.error(err)
       return false
@@ -222,14 +240,16 @@ export default function useRentalApi() {
   const completeRental = async (id: number, returnDate: string) => {
     setLoading(true)
     try {
-      const response = await axios.patch(`${API_BASE_URL}/api/alquileres/${id}/completar?fechaDevolucion=${returnDate}`)
+      const response = await axios.patch(
+        `${API_BASE_URL}/api/alquileres/${id}/completar?fechaDevolucion=${encodeURIComponent(returnDate)}`
+      )
       const updatedRental = response.data
 
       setRentals(rentals.map((rental) => (rental.id === id ? updatedRental : rental)))
       showAlertMessage("Alquiler completado con éxito", "success")
       return true
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       showAlertMessage(`Error al completar el alquiler: ${errorMessage}`, "error")
       console.error(err)
       return false
@@ -249,7 +269,7 @@ export default function useRentalApi() {
       showAlertMessage("Alquiler cancelado con éxito", "success")
       return true
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       showAlertMessage(`Error al cancelar el alquiler: ${errorMessage}`, "error")
       console.error(err)
       return false
@@ -269,7 +289,7 @@ export default function useRentalApi() {
       showAlertMessage("Alquiler activado con éxito", "success")
       return true
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       showAlertMessage(`Error al activar el alquiler: ${errorMessage}`, "error")
       console.error(err)
       return false
@@ -288,7 +308,7 @@ export default function useRentalApi() {
       showAlertMessage("Alquiler eliminado con éxito", "success")
       return true
     } catch (err) {
-      const errorMessage = extractErrorMessage(err)
+      const errorMessage = extractErrorMessage(err as AxiosError<ErrorResponse>)
       showAlertMessage(`Error al eliminar el alquiler: ${errorMessage}`, "error")
       console.error(err)
       return false

@@ -30,6 +30,17 @@ export default function DeleteConfirmation({
     return "elemento"
   }
 
+  // Función para formatear fechas
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A"
+    const date = new Date(dateString)
+    return date.toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  }
+
   // Obtener el título y detalles según el tipo de elemento
   const getItemDetails = () => {
     if (client) {
@@ -58,17 +69,6 @@ export default function DeleteConfirmation({
 
   const itemType = getItemType()
   const itemDetails = getItemDetails()
-
-  // Función para formatear fechas
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A"
-    const date = new Date(dateString)
-    return date.toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
 
   return (
     <div className="text-center">

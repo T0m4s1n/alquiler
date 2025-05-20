@@ -7,10 +7,16 @@ type PaginationProps = {
   currentPage: number
   totalPages: number
   onPageChange: (page: number) => void
+  isSearchActive: boolean // Nueva prop para saber si hay búsqueda activa
 }
 
-export default function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+export default function Pagination({ currentPage, totalPages, onPageChange, isSearchActive }: PaginationProps) {
   const [hoveredPage, setHoveredPage] = useState<number | null>(null)
+
+  // Si hay una búsqueda activa, no mostramos la paginación
+  if (isSearchActive) {
+    return null;
+  }
 
   return (
     <div className="flex justify-between items-center mt-6">

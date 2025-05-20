@@ -87,17 +87,20 @@ export default function useClientApi() {
     setLoading(true)
     try {
       let endpoint = `${API_BASE_URL}/api/clientes`
+      const encodedValue = encodeURIComponent(filterValue.trim())
 
       switch (filterType) {
         case "nombre":
-          endpoint = `${API_BASE_URL}/api/clientes/nombre/${filterValue}`
+          endpoint = `${API_BASE_URL}/api/clientes/nombre/${encodedValue}`
           break
         case "documento":
-          endpoint = `${API_BASE_URL}/api/clientes/documento/${filterValue}`
+          endpoint = `${API_BASE_URL}/api/clientes/documento/${encodedValue}`
           break
         case "email":
-          endpoint = `${API_BASE_URL}/api/clientes/email/${filterValue}`
+          endpoint = `${API_BASE_URL}/api/clientes/email/${encodedValue}`
           break
+        default:
+          throw new Error("Tipo de filtro no válido")
       }
 
       const response = await axios.get(endpoint)
@@ -108,7 +111,12 @@ export default function useClientApi() {
       setError(null)
     } catch (err) {
       const errorMessage = extractErrorMessage(err)
-      setError(`Error al filtrar los clientes: ${errorMessage}`)
+      // Si es un error 404, mostrar un mensaje más amigable
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        setError(`No se encontraron clientes con el ${filterType} especificado`)
+      } else {
+        setError(`Error al filtrar los clientes: ${errorMessage}`)
+      }
       setLoading(false)
       console.error(err)
     }
